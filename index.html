@@ -3,20 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="description" content="Browser-based handpan instrument with polyrhythmic sequencer and audio effects. No install needed.">
-<meta property="og:title" content="Handpan">
-<meta property="og:description" content="Play a D Dorian handpan in your browser. Polyrhythm, looper, reverb, delay, chorus and filter — all in one HTML file.">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#111111">
 <title>Handpan</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 html, body {
   width:100%; height:100%; min-height:100dvh;
   background:#111; overflow:hidden;
-  touch-action:none; font-family:'DM Mono', monospace;
+  touch-action:none; font-family:'Inter', sans-serif;
 }
 
 /* ═══ LAYOUT ══════════════════════════════════════════ */
@@ -57,7 +52,7 @@ html, body {
   flex-shrink:0;
 }
 .panel-label {
-  font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+  font-size:9px; letter-spacing:0.03em; text-transform:uppercase;
   color:rgba(255,255,255,0.3); margin-bottom:12px;
   display:block;
 }
@@ -67,7 +62,7 @@ html, body {
 }
 #bpm-display {
   flex:1; text-align:center;
-  font-size:22px; font-weight:300; letter-spacing:0.04em;
+  font-size:24px; font-weight:400; letter-spacing:-0.01em;
   color:rgba(255,255,255,0.9);
   background:rgba(255,255,255,0.05);
   border:1px solid rgba(255,255,255,0.15);
@@ -76,7 +71,7 @@ html, body {
   user-select:none; -webkit-user-select:none;
 }
 #bpm-display:active, #bpm-display.tapped { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.3); }
-#bpm-sub { font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px; }
+#bpm-sub { font-size:9px; letter-spacing:0.03em; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px; }
 
 .bpm-nudge {
   width:36px; height:36px; border-radius:10px;
@@ -102,11 +97,11 @@ html, body {
 .lane-b .lane-dot { background:rgba(255,255,255,0.45); }
 .lane-c .lane-dot { background:rgba(255,255,255,0.22); }
 .lane-name {
-  font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+  font-size:11px; letter-spacing:0.04em; text-transform:uppercase;
   color:rgba(255,255,255,0.6); flex:1;
 }
 .lane-mute {
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em;
+  font-family:'Inter',sans-serif; font-size:9px; letter-spacing:0.03em;
   color:rgba(255,255,255,0.45); background:rgba(255,255,255,0.05);
   border:1px solid rgba(255,255,255,0.18); border-radius:6px;
   padding:4px 10px; cursor:pointer; transition:all 0.15s; -webkit-appearance:none;
@@ -115,14 +110,14 @@ html, body {
 .lane-mute.muted { color:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.07); background:none; }
 
 .lane-sub {
-  font-size:8px; letter-spacing:0.14em; text-transform:uppercase;
+  font-size:8px; letter-spacing:0.06em; text-transform:uppercase;
   color:rgba(255,255,255,0.28); margin-bottom:6px;
 }
 
 /* Ratio & note pills */
 .ratio-wrap, .note-wrap { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
 .ratio-btn, .note-pill {
-  font-family:'DM Mono',monospace; font-size:10px; font-weight:300;
+  font-family:'Inter',sans-serif; font-size:10px; font-weight:300;
   background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14);
   color:rgba(255,255,255,0.45); padding:5px 9px; border-radius:7px;
   cursor:pointer; transition:all 0.12s; -webkit-appearance:none; min-height:28px;
@@ -134,7 +129,7 @@ html, body {
 
 /* Vol row */
 .vol-row { display:flex; align-items:center; gap:10px; }
-.vol-label { font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.28); min-width:22px; }
+.vol-label { font-size:8px; letter-spacing:0.04em; text-transform:uppercase; color:rgba(255,255,255,0.28); min-width:22px; }
 .vol-slider {
   flex:1; height:3px; -webkit-appearance:none; appearance:none;
   background:rgba(255,255,255,0.15); border-radius:2px; outline:none; cursor:pointer;
@@ -155,7 +150,7 @@ html, body {
 }
 .fx-header:hover { background:rgba(255,255,255,0.02); }
 .fx-name {
-  font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
   color:rgba(255,255,255,0.55); flex:1;
 }
 .fx-chevron {
@@ -174,11 +169,14 @@ html, body {
 }
 .tog input:checked ~ .tog-track { background:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.55); }
 .tog-thumb {
-  position:absolute; top:3px; left:3px; width:10px; height:10px;
+  position:absolute;
+  top:50%; left:3px;
+  width:10px; height:10px;
   background:rgba(255,255,255,0.4); border-radius:50%;
+  transform:translateY(-50%);
   transition:transform 0.18s, background 0.18s; pointer-events:none;
 }
-.tog input:checked ~ .tog-thumb { transform:translateX(14px); background:#fff; }
+.tog input:checked ~ .tog-thumb { transform:translate(14px, -50%); background:#fff; }
 
 /* Collapsible body */
 .fx-body {
@@ -189,7 +187,7 @@ html, body {
 .fx-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
 .fx-row:last-child { margin-bottom:0; }
 .fx-label {
-  font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+  font-size:9px; letter-spacing:0.03em; text-transform:uppercase;
   color:rgba(255,255,255,0.35); min-width:52px;
 }
 .fx-slider {
@@ -206,7 +204,7 @@ html, body {
 /* FX section label row */
 #fx-section-label {
   padding:16px 20px 10px;
-  font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+  font-size:9px; letter-spacing:0.03em; text-transform:uppercase;
   color:rgba(255,255,255,0.3);
   border-bottom:1px solid rgba(255,255,255,0.05);
 }
@@ -220,7 +218,7 @@ html, body {
 }
 
 #poly-play-btn {
-  font-family:'DM Mono',monospace; font-size:12px; font-weight:300; letter-spacing:0.14em;
+  font-family:'Inter',sans-serif; font-size:12px; font-weight:300; letter-spacing:0.06em;
   text-transform:uppercase;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.3);
   color:rgba(255,255,255,0.8);
@@ -233,8 +231,24 @@ html, body {
   border-color:rgba(255,255,255,0.6);
 }
 #poly-bpm {
-  font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.28);
+  font-size:9px; letter-spacing:0.03em; color:rgba(255,255,255,0.28);
   text-align:center;
+}
+
+/* ═══ EQ VISUALISER ════════════════════════════════ */
+#eq-section {
+  padding:16px 20px 14px;
+  border-top:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+#eq-label {
+  font-size:9px; letter-spacing:0.03em; text-transform:uppercase;
+  color:rgba(255,255,255,0.3); display:block; margin-bottom:10px;
+}
+#eq-canvas {
+  width:100%; height:64px;
+  display:block; border-radius:6px;
+  background:rgba(255,255,255,0.03);
 }
 
 /* ═══ DISC ═══════════════════════════════════════════ */
@@ -253,14 +267,14 @@ html, body {
 /* ═══ STAGE CONTROLS ════════════════════════════════ */
 #title {
   position:absolute; top:28px;
-  font-size:12px; font-weight:300; letter-spacing:0.12em;
+  font-size:12px; font-weight:300; letter-spacing:0.05em;
   color:rgba(255,255,255,0.2);
 }
 
 #ctrl-row { display:flex; align-items:center; gap:8px; margin-top:20px; }
 .ctrl-btn {
-  font-family:'DM Mono',monospace; font-size:10px; font-weight:300;
-  letter-spacing:0.1em; text-transform:uppercase;
+  font-family:'Inter',sans-serif; font-size:10px; font-weight:300;
+  letter-spacing:0.04em; text-transform:uppercase;
   background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.22);
   color:rgba(255,255,255,0.65);
   padding:10px 18px; border-radius:100px; cursor:pointer; min-height:40px;
@@ -274,7 +288,7 @@ html, body {
 
 #btm-row { display:flex; align-items:center; gap:10px; margin-top:12px; }
 .pill-btn {
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em;
+  font-family:'Inter',sans-serif; font-size:9px; letter-spacing:0.03em;
   color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.05);
   border:1px solid rgba(255,255,255,0.16); border-radius:20px; padding:6px 14px;
   cursor:pointer; min-height:30px; transition:all 0.15s; -webkit-appearance:none;
@@ -432,6 +446,12 @@ html, body {
 
   </div><!-- /panel-body -->
 
+  <!-- EQ Visualiser — above start button -->
+  <div id="eq-section">
+    <span id="eq-label">Frequency</span>
+    <canvas id="eq-canvas"></canvas>
+  </div>
+
   <!-- Start — bottom -->
   <div id="panel-bottom">
     <button id="poly-play-btn">▶ Start Polyrhythm</button>
@@ -478,7 +498,7 @@ html, body {
       <g id="note-labels"></g>
       <ellipse id="ding" cx="200" cy="200" rx="48" ry="44" fill="url(#ding-d)" stroke="rgba(0,0,0,0.5)" stroke-width="2.5" style="cursor:pointer"/>
       <ellipse cx="200" cy="200" rx="48" ry="44" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1" pointer-events="none"/>
-      <text id="ding-lbl" x="200" y="200" font-family="DM Mono,monospace" font-size="11" font-weight="300" letter-spacing="1" fill="rgba(255,255,255,0.28)" text-anchor="middle" dominant-baseline="middle" pointer-events="none" opacity="0">D4</text>
+      <text id="ding-lbl" x="200" y="200" font-family="Inter,sans-serif" font-size="11" font-weight="300" letter-spacing="1" fill="rgba(255,255,255,0.28)" text-anchor="middle" dominant-baseline="middle" pointer-events="none" opacity="0">D4</text>
       <circle id="metro-ring" cx="200" cy="200" r="186" fill="none" stroke="rgba(255,255,255,0)" stroke-width="1" stroke-dasharray="5 15" transform="rotate(-90 200 200)"/>
       <circle id="loop-progress" cx="200" cy="200" r="180" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="1130.97" stroke-dashoffset="1130.97" transform="rotate(-90 200 200)" opacity="0"/>
     </svg>
@@ -573,6 +593,13 @@ function buildChain() {
 
   preFX=actx.createGain(); preFX.gain.value=0.9;
   preFX.connect(chorusDryG); preFX.connect(chorusDelayNode);
+
+  // Analyser for EQ visualiser (tapped after preFX)
+  analyser = actx.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.8;
+  preFX.connect(analyser);
+  startEQ();
 }
 
 function playNote(freq, vel=1) {
@@ -697,7 +724,7 @@ FIELD_ANGLES.forEach((deg,i)=>{
   tfGroup.appendChild(hi);
   const lbl=document.createElementNS(ns,'text');
   lbl.setAttribute('x',cx.toFixed(1));lbl.setAttribute('y',cy.toFixed(1));
-  lbl.setAttribute('font-family','DM Mono,monospace');lbl.setAttribute('font-size','11');lbl.setAttribute('font-weight','300');lbl.setAttribute('letter-spacing','1');
+  lbl.setAttribute('font-family','Inter,sans-serif');lbl.setAttribute('font-size','11');lbl.setAttribute('font-weight','300');lbl.setAttribute('letter-spacing','1');
   lbl.setAttribute('fill','rgba(255,255,255,0.3)');lbl.setAttribute('text-anchor','middle');lbl.setAttribute('dominant-baseline','middle');
   lbl.setAttribute('pointer-events','none');lbl.setAttribute('opacity','0');lbl.textContent=NOTES[i+1].name;
   lblGroup.appendChild(lbl);
@@ -1032,6 +1059,93 @@ function stopPoly(){
   $('poly-play-btn').textContent='▶ Start Polyrhythm';$('poly-play-btn').classList.remove('playing');
 }
 $('poly-play-btn').addEventListener('click',()=>{ensureCtx();polyPlaying?stopPoly():startPoly();});
+
+// ═══════════════════════════════════════════════════════
+// EQ VISUALISER
+// ═══════════════════════════════════════════════════════
+let analyser = null;
+let eqRAF    = null;
+
+const eqCanvas  = $('eq-canvas');
+const eqCtx     = eqCanvas.getContext('2d');
+
+function resizeEQ() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = eqCanvas.getBoundingClientRect();
+  eqCanvas.width  = rect.width  * dpr;
+  eqCanvas.height = rect.height * dpr;
+  eqCtx.scale(dpr, dpr);
+}
+resizeEQ();
+window.addEventListener('resize', resizeEQ);
+
+function drawEQ() {
+  eqRAF = requestAnimationFrame(drawEQ);
+  const W = eqCanvas.getBoundingClientRect().width;
+  const H = eqCanvas.getBoundingClientRect().height;
+
+  eqCtx.clearRect(0, 0, W, H);
+
+  if (!analyser) {
+    // Draw flat idle state
+    drawIdleEQ(W, H);
+    return;
+  }
+
+  const bufLen = analyser.frequencyBinCount; // 128
+  const data   = new Uint8Array(bufLen);
+  analyser.getByteFrequencyData(data);
+
+  // We only care about roughly the first half (up to ~10kHz)
+  // 5 bands mapping to D4, F4, A4, C5, E5 frequency ranges
+  // Plus 16 display bars for a smooth look
+  const NUM_BARS = 24;
+  const barW     = (W - (NUM_BARS - 1) * 2) / NUM_BARS;
+  const maxBin   = Math.floor(bufLen * 0.55); // cut off ultrasonic
+
+  for (let i = 0; i < NUM_BARS; i++) {
+    // Map bar index to frequency bin range
+    const startBin = Math.floor((i / NUM_BARS) * maxBin);
+    const endBin   = Math.floor(((i + 1) / NUM_BARS) * maxBin);
+    let sum = 0;
+    for (let b = startBin; b < endBin; b++) sum += data[b];
+    const avg = endBin > startBin ? sum / (endBin - startBin) : 0;
+
+    // Normalise 0-255 → 0-1, apply slight curve for musicality
+    const norm = Math.pow(avg / 255, 0.7);
+    const barH = Math.max(2, norm * (H - 4));
+    const x    = i * (barW + 2);
+    const y    = H - barH;
+
+    // Colour: subtle gradient from dim base to brighter top
+    const opacity = 0.15 + norm * 0.65;
+    eqCtx.fillStyle = `rgba(255,255,255,${opacity.toFixed(3)})`;
+    eqCtx.beginPath();
+    eqCtx.roundRect(x, y, barW, barH, 2);
+    eqCtx.fill();
+  }
+}
+
+function drawIdleEQ(W, H) {
+  // A faint flat line when no audio context yet
+  const NUM_BARS = 24;
+  const barW = (W - (NUM_BARS - 1) * 2) / NUM_BARS;
+  for (let i = 0; i < NUM_BARS; i++) {
+    const x = i * (barW + 2);
+    eqCtx.fillStyle = 'rgba(255,255,255,0.07)';
+    eqCtx.beginPath();
+    eqCtx.roundRect(x, H - 2, barW, 2, 1);
+    eqCtx.fill();
+  }
+}
+
+function startEQ() {
+  if (eqRAF) cancelAnimationFrame(eqRAF);
+  eqRAF = requestAnimationFrame(drawEQ);
+}
+
+// Start idle render immediately
+startEQ();
 </script>
 </body>
 </html>
