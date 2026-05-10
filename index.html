@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="Browser-based handpan instrument with polyrhythmic sequencer and audio effects. No install needed.">
+<meta property="og:title" content="Handpan">
+<meta property="og:description" content="Play a D Dorian handpan in your browser. Polyrhythm, looper, reverb, delay, chorus and filter — all in one HTML file.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#111111">
+<title>Handpan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%; min-height:100dvh;
+  background:#111; overflow:hidden;
+  touch-action:none; font-family:'DM Mono', monospace;
+}
+
+/* ═══ LAYOUT ══════════════════════════════════════════ */
+#shell { width:100%; height:100%; display:flex; }
+
+/* Left panel */
+#panel {
+  width:280px; flex-shrink:0; height:100%;
+  background:#181818;
+  border-right:1px solid rgba(255,255,255,0.08);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+/* Scrollable body between top and bottom */
+#panel-body {
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  scrollbar-width:thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+#panel-body::-webkit-scrollbar { width:3px; }
+#panel-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+
+/* Stage */
+#stage {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  position:relative;
+  user-select:none; -webkit-user-select:none;
+  background:#111;
+}
+
+/* ═══ PANEL TOP — BPM ════════════════════════════════ */
+#bpm-section {
+  padding:24px 20px 20px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+.panel-label {
+  font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+  color:rgba(255,255,255,0.3); margin-bottom:12px;
+  display:block;
+}
+
+#bpm-ctrl {
+  display:flex; align-items:center; gap:8px;
+}
+#bpm-display {
+  flex:1; text-align:center;
+  font-size:22px; font-weight:300; letter-spacing:0.04em;
+  color:rgba(255,255,255,0.9);
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:10px; padding:10px 8px;
+  cursor:pointer; transition:all 0.12s;
+  user-select:none; -webkit-user-select:none;
+}
+#bpm-display:active, #bpm-display.tapped { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.3); }
+#bpm-sub { font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.3); text-align:center; margin-top:6px; }
+
+.bpm-nudge {
+  width:36px; height:36px; border-radius:10px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.7); font-size:18px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all 0.12s; -webkit-appearance:none; flex-shrink:0;
+}
+.bpm-nudge:active { background:rgba(255,255,255,0.14); color:#fff; border-color:rgba(255,255,255,0.35); }
+
+/* ═══ POLY SECTION ═══════════════════════════════════ */
+#poly-section {
+  padding:20px 20px 4px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+
+.poly-lane { margin-bottom:20px; }
+.poly-lane-head {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.lane-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.lane-a .lane-dot { background:rgba(255,255,255,0.8); }
+.lane-b .lane-dot { background:rgba(255,255,255,0.45); }
+.lane-c .lane-dot { background:rgba(255,255,255,0.22); }
+.lane-name {
+  font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+  color:rgba(255,255,255,0.6); flex:1;
+}
+.lane-mute {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em;
+  color:rgba(255,255,255,0.45); background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.18); border-radius:6px;
+  padding:4px 10px; cursor:pointer; transition:all 0.15s; -webkit-appearance:none;
+  min-height:26px;
+}
+.lane-mute.muted { color:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.07); background:none; }
+
+.lane-sub {
+  font-size:8px; letter-spacing:0.14em; text-transform:uppercase;
+  color:rgba(255,255,255,0.28); margin-bottom:6px;
+}
+
+/* Ratio & note pills */
+.ratio-wrap, .note-wrap { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+.ratio-btn, .note-pill {
+  font-family:'DM Mono',monospace; font-size:10px; font-weight:300;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14);
+  color:rgba(255,255,255,0.45); padding:5px 9px; border-radius:7px;
+  cursor:pointer; transition:all 0.12s; -webkit-appearance:none; min-height:28px;
+}
+.ratio-btn.sel, .note-pill.sel {
+  color:#fff; background:rgba(255,255,255,0.12);
+  border-color:rgba(255,255,255,0.5);
+}
+
+/* Vol row */
+.vol-row { display:flex; align-items:center; gap:10px; }
+.vol-label { font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.28); min-width:22px; }
+.vol-slider {
+  flex:1; height:3px; -webkit-appearance:none; appearance:none;
+  background:rgba(255,255,255,0.15); border-radius:2px; outline:none; cursor:pointer;
+}
+.vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.75); border:none; cursor:pointer; }
+.vol-slider::-moz-range-thumb    { width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.75); border:none; cursor:pointer; }
+
+/* ═══ FX — collapsible ══════════════════════════════ */
+#fx-section { border-bottom:1px solid rgba(255,255,255,0.07); }
+
+.fx-block { border-top:1px solid rgba(255,255,255,0.05); }
+.fx-block:first-child { border-top:none; }
+
+.fx-header {
+  display:flex; align-items:center; gap:10px;
+  padding:13px 20px; cursor:pointer;
+  transition:background 0.12s;
+}
+.fx-header:hover { background:rgba(255,255,255,0.02); }
+.fx-name {
+  font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  color:rgba(255,255,255,0.55); flex:1;
+}
+.fx-chevron {
+  font-size:10px; color:rgba(255,255,255,0.25);
+  transition:transform 0.2s; flex-shrink:0;
+}
+.fx-block.expanded .fx-chevron { transform:rotate(180deg); }
+
+/* Toggle switch */
+.tog { position:relative; width:32px; height:18px; cursor:pointer; flex-shrink:0; }
+.tog input { opacity:0; width:0; height:0; position:absolute; }
+.tog-track {
+  position:absolute; inset:0; border-radius:9px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  transition:all 0.2s;
+}
+.tog input:checked ~ .tog-track { background:rgba(255,255,255,0.2); border-color:rgba(255,255,255,0.55); }
+.tog-thumb {
+  position:absolute; top:3px; left:3px; width:10px; height:10px;
+  background:rgba(255,255,255,0.4); border-radius:50%;
+  transition:transform 0.18s, background 0.18s; pointer-events:none;
+}
+.tog input:checked ~ .tog-thumb { transform:translateX(14px); background:#fff; }
+
+/* Collapsible body */
+.fx-body {
+  display:none; padding:0 20px 14px;
+}
+.fx-block.expanded .fx-body { display:block; }
+
+.fx-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.fx-row:last-child { margin-bottom:0; }
+.fx-label {
+  font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+  color:rgba(255,255,255,0.35); min-width:52px;
+}
+.fx-slider {
+  flex:1; height:3px; -webkit-appearance:none; appearance:none;
+  background:rgba(255,255,255,0.15); border-radius:2px; outline:none; cursor:pointer;
+}
+.fx-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.75); border:none; cursor:pointer; }
+.fx-slider::-moz-range-thumb    { width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.75); border:none; cursor:pointer; }
+.fx-val {
+  font-size:9px; color:rgba(255,255,255,0.45); min-width:30px; text-align:right;
+}
+.fx-block.off .fx-row { opacity:0.25; pointer-events:none; }
+
+/* FX section label row */
+#fx-section-label {
+  padding:16px 20px 10px;
+  font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+  color:rgba(255,255,255,0.3);
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+/* ═══ PANEL BOTTOM — start button ═══════════════════ */
+#panel-bottom {
+  padding:16px 20px 24px;
+  border-top:1px solid rgba(255,255,255,0.07);
+  display:flex; flex-direction:column; gap:8px;
+  flex-shrink:0; background:#181818;
+}
+
+#poly-play-btn {
+  font-family:'DM Mono',monospace; font-size:12px; font-weight:300; letter-spacing:0.14em;
+  text-transform:uppercase;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.3);
+  color:rgba(255,255,255,0.8);
+  padding:14px; border-radius:12px; cursor:pointer; width:100%;
+  min-height:48px; transition:all 0.15s; -webkit-appearance:none;
+}
+#poly-play-btn:active { background:rgba(255,255,255,0.14); }
+#poly-play-btn.playing {
+  color:#fff; background:rgba(255,255,255,0.1);
+  border-color:rgba(255,255,255,0.6);
+}
+#poly-bpm {
+  font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.28);
+  text-align:center;
+}
+
+/* ═══ DISC ═══════════════════════════════════════════ */
+#disc-wrap {
+  position:relative;
+  width:min(72vw, 68vh, 360px);
+  height:min(72vw, 68vh, 360px);
+  cursor:pointer;
+}
+#disc-svg { width:100%; height:100%; overflow:visible; display:block; }
+#ripple-svg, #loop-svg {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  pointer-events:none; overflow:visible;
+}
+
+/* ═══ STAGE CONTROLS ════════════════════════════════ */
+#title {
+  position:absolute; top:28px;
+  font-size:12px; font-weight:300; letter-spacing:0.12em;
+  color:rgba(255,255,255,0.2);
+}
+
+#ctrl-row { display:flex; align-items:center; gap:8px; margin-top:20px; }
+.ctrl-btn {
+  font-family:'DM Mono',monospace; font-size:10px; font-weight:300;
+  letter-spacing:0.1em; text-transform:uppercase;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.22);
+  color:rgba(255,255,255,0.65);
+  padding:10px 18px; border-radius:100px; cursor:pointer; min-height:40px;
+  transition:all 0.15s; -webkit-appearance:none;
+}
+.ctrl-btn:active { background:rgba(255,255,255,0.12); }
+.ctrl-btn.recording { color:#fff; background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.65); animation:rec-pulse 1s ease-in-out infinite; }
+.ctrl-btn.playing   { color:#fff; background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.55); }
+.ctrl-btn.disabled  { opacity:0.2; pointer-events:none; }
+@keyframes rec-pulse { 0%,100%{border-color:rgba(255,255,255,0.6)} 50%{border-color:rgba(255,255,255,0.1)} }
+
+#btm-row { display:flex; align-items:center; gap:10px; margin-top:12px; }
+.pill-btn {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.08em;
+  color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.16); border-radius:20px; padding:6px 14px;
+  cursor:pointer; min-height:30px; transition:all 0.15s; -webkit-appearance:none;
+}
+.pill-btn.on { color:#fff; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.45); }
+</style>
+</head>
+<body>
+<div id="shell">
+
+<!-- ═══════════════ LEFT PANEL ═══════════════ -->
+<div id="panel">
+
+  <!-- BPM — top -->
+  <div id="bpm-section">
+    <span class="panel-label">Tempo</span>
+    <div id="bpm-ctrl">
+      <button class="bpm-nudge" id="bpm-dec">−</button>
+      <div id="bpm-display">120</div>
+      <button class="bpm-nudge" id="bpm-inc">+</button>
+    </div>
+    <div id="bpm-sub">tap to set · hold ± to sweep</div>
+  </div>
+
+  <!-- Scrollable middle -->
+  <div id="panel-body">
+
+    <!-- Poly lanes -->
+    <div id="poly-section">
+      <span class="panel-label">Polyrhythm</span>
+
+      <!-- Lane A -->
+      <div class="poly-lane lane-a">
+        <div class="poly-lane-head">
+          <div class="lane-dot"></div>
+          <span class="lane-name">Lane A</span>
+          <button class="lane-mute" id="mute-a">mute</button>
+        </div>
+        <div class="lane-sub">Ratio</div>
+        <div class="ratio-wrap" id="ratios-a"></div>
+        <div class="lane-sub">Notes</div>
+        <div class="note-wrap" id="notes-a"></div>
+        <div class="vol-row">
+          <span class="vol-label">vol</span>
+          <input type="range" class="vol-slider" id="vol-a" min="0" max="100" value="75">
+        </div>
+      </div>
+
+      <!-- Lane B -->
+      <div class="poly-lane lane-b">
+        <div class="poly-lane-head">
+          <div class="lane-dot"></div>
+          <span class="lane-name">Lane B</span>
+          <button class="lane-mute" id="mute-b">mute</button>
+        </div>
+        <div class="lane-sub">Ratio</div>
+        <div class="ratio-wrap" id="ratios-b"></div>
+        <div class="lane-sub">Notes</div>
+        <div class="note-wrap" id="notes-b"></div>
+        <div class="vol-row">
+          <span class="vol-label">vol</span>
+          <input type="range" class="vol-slider" id="vol-b" min="0" max="100" value="55">
+        </div>
+      </div>
+
+      <!-- Lane C -->
+      <div class="poly-lane lane-c">
+        <div class="poly-lane-head">
+          <div class="lane-dot"></div>
+          <span class="lane-name">Lane C</span>
+          <button class="lane-mute" id="mute-c">mute</button>
+        </div>
+        <div class="lane-sub">Ratio</div>
+        <div class="ratio-wrap" id="ratios-c"></div>
+        <div class="lane-sub">Notes</div>
+        <div class="note-wrap" id="notes-c"></div>
+        <div class="vol-row">
+          <span class="vol-label">vol</span>
+          <input type="range" class="vol-slider" id="vol-c" min="0" max="100" value="45">
+        </div>
+      </div>
+    </div><!-- /poly-section -->
+
+    <!-- FX — collapsible -->
+    <div id="fx-section">
+      <div id="fx-section-label">Effects</div>
+
+      <!-- Reverb -->
+      <div class="fx-block off" id="fxb-reverb">
+        <div class="fx-header">
+          <span class="fx-name">Reverb</span>
+          <label class="tog" onclick="event.stopPropagation()">
+            <input type="checkbox" id="tog-reverb">
+            <div class="tog-track"></div><div class="tog-thumb"></div>
+          </label>
+          <span class="fx-chevron">▾</span>
+        </div>
+        <div class="fx-body">
+          <div class="fx-row"><span class="fx-label">size</span><input type="range" class="fx-slider" id="rv-size" min="0" max="100" value="60"><span class="fx-val" id="rv-size-val">60%</span></div>
+          <div class="fx-row"><span class="fx-label">mix</span><input type="range" class="fx-slider" id="rv-mix" min="0" max="100" value="35"><span class="fx-val" id="rv-mix-val">35%</span></div>
+        </div>
+      </div>
+
+      <!-- Delay -->
+      <div class="fx-block off" id="fxb-delay">
+        <div class="fx-header">
+          <span class="fx-name">Delay</span>
+          <label class="tog" onclick="event.stopPropagation()">
+            <input type="checkbox" id="tog-delay">
+            <div class="tog-track"></div><div class="tog-thumb"></div>
+          </label>
+          <span class="fx-chevron">▾</span>
+        </div>
+        <div class="fx-body">
+          <div class="fx-row"><span class="fx-label">time</span><input type="range" class="fx-slider" id="dl-time" min="0" max="100" value="50"><span class="fx-val" id="dl-time-val">1/8</span></div>
+          <div class="fx-row"><span class="fx-label">feedback</span><input type="range" class="fx-slider" id="dl-fb" min="0" max="85" value="38"><span class="fx-val" id="dl-fb-val">38%</span></div>
+          <div class="fx-row"><span class="fx-label">mix</span><input type="range" class="fx-slider" id="dl-mix" min="0" max="100" value="30"><span class="fx-val" id="dl-mix-val">30%</span></div>
+        </div>
+      </div>
+
+      <!-- Chorus -->
+      <div class="fx-block off" id="fxb-chorus">
+        <div class="fx-header">
+          <span class="fx-name">Chorus</span>
+          <label class="tog" onclick="event.stopPropagation()">
+            <input type="checkbox" id="tog-chorus">
+            <div class="tog-track"></div><div class="tog-thumb"></div>
+          </label>
+          <span class="fx-chevron">▾</span>
+        </div>
+        <div class="fx-body">
+          <div class="fx-row"><span class="fx-label">rate</span><input type="range" class="fx-slider" id="ch-rate" min="0" max="100" value="30"><span class="fx-val" id="ch-rate-val">1.3Hz</span></div>
+          <div class="fx-row"><span class="fx-label">depth</span><input type="range" class="fx-slider" id="ch-depth" min="0" max="100" value="40"><span class="fx-val" id="ch-depth-val">40%</span></div>
+          <div class="fx-row"><span class="fx-label">mix</span><input type="range" class="fx-slider" id="ch-mix" min="0" max="100" value="40"><span class="fx-val" id="ch-mix-val">40%</span></div>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="fx-block off" id="fxb-filter">
+        <div class="fx-header">
+          <span class="fx-name">Filter</span>
+          <label class="tog" onclick="event.stopPropagation()">
+            <input type="checkbox" id="tog-filter">
+            <div class="tog-track"></div><div class="tog-thumb"></div>
+          </label>
+          <span class="fx-chevron">▾</span>
+        </div>
+        <div class="fx-body">
+          <div class="fx-row"><span class="fx-label">cutoff</span><input type="range" class="fx-slider" id="fl-cutoff" min="0" max="100" value="80"><span class="fx-val" id="fl-cutoff-val">8kHz</span></div>
+          <div class="fx-row"><span class="fx-label">reso</span><input type="range" class="fx-slider" id="fl-reso" min="0" max="100" value="20"><span class="fx-val" id="fl-reso-val">20%</span></div>
+        </div>
+      </div>
+
+    </div><!-- /fx-section -->
+
+  </div><!-- /panel-body -->
+
+  <!-- Start — bottom -->
+  <div id="panel-bottom">
+    <button id="poly-play-btn">▶ Start Polyrhythm</button>
+    <div id="poly-bpm"></div>
+  </div>
+
+</div><!-- /panel -->
+
+<!-- ═══════════════ STAGE ═══════════════ -->
+<div id="stage">
+  <div id="title">Handpan</div>
+
+  <div id="disc-wrap">
+    <svg id="disc-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="body-grad" cx="40%" cy="34%" r="70%">
+          <stop offset="0%" stop-color="#3e3e3e"/><stop offset="45%" stop-color="#292929"/><stop offset="100%" stop-color="#1c1c1c"/>
+        </radialGradient>
+        <radialGradient id="tf-d" cx="50%" cy="38%" r="62%">
+          <stop offset="0%" stop-color="#404040"/><stop offset="100%" stop-color="#2c2c2c"/>
+        </radialGradient>
+        <radialGradient id="tf-a" cx="50%" cy="38%" r="62%">
+          <stop offset="0%" stop-color="#6a6a6a"/><stop offset="100%" stop-color="#3c3c3c"/>
+        </radialGradient>
+        <radialGradient id="ding-d" cx="38%" cy="33%" r="68%">
+          <stop offset="0%" stop-color="#484848"/><stop offset="100%" stop-color="#2a2a2a"/>
+        </radialGradient>
+        <radialGradient id="ding-a" cx="38%" cy="33%" r="68%">
+          <stop offset="0%" stop-color="#747474"/><stop offset="100%" stop-color="#383838"/>
+        </radialGradient>
+        <radialGradient id="rim-hi" cx="50%" cy="8%" r="85%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.09)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+        <clipPath id="disc-clip"><circle cx="200" cy="200" r="193"/></clipPath>
+      </defs>
+      <circle cx="200" cy="205" r="193" fill="rgba(0,0,0,0.6)"/>
+      <circle cx="200" cy="200" r="193" fill="url(#body-grad)"/>
+      <circle cx="200" cy="200" r="193" fill="url(#rim-hi)"/>
+      <circle cx="200" cy="200" r="193" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+      <circle cx="200" cy="200" r="191" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1"/>
+      <circle cx="200" cy="200" r="133" fill="none" stroke="rgba(0,0,0,0.55)" stroke-width="3"/>
+      <circle cx="200" cy="200" r="131" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+      <g id="tone-fields"></g>
+      <g id="note-labels"></g>
+      <ellipse id="ding" cx="200" cy="200" rx="48" ry="44" fill="url(#ding-d)" stroke="rgba(0,0,0,0.5)" stroke-width="2.5" style="cursor:pointer"/>
+      <ellipse cx="200" cy="200" rx="48" ry="44" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1" pointer-events="none"/>
+      <text id="ding-lbl" x="200" y="200" font-family="DM Mono,monospace" font-size="11" font-weight="300" letter-spacing="1" fill="rgba(255,255,255,0.28)" text-anchor="middle" dominant-baseline="middle" pointer-events="none" opacity="0">D4</text>
+      <circle id="metro-ring" cx="200" cy="200" r="186" fill="none" stroke="rgba(255,255,255,0)" stroke-width="1" stroke-dasharray="5 15" transform="rotate(-90 200 200)"/>
+      <circle id="loop-progress" cx="200" cy="200" r="180" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="1130.97" stroke-dashoffset="1130.97" transform="rotate(-90 200 200)" opacity="0"/>
+    </svg>
+    <svg id="ripple-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+    <svg id="loop-svg"   viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div id="ctrl-row">
+    <button class="ctrl-btn" id="btn-record">● rec</button>
+    <button class="ctrl-btn disabled" id="btn-play">▶ play</button>
+    <button class="ctrl-btn disabled" id="btn-clear">clear</button>
+  </div>
+
+  <div id="btm-row">
+    <button class="pill-btn" id="metro-btn">grid</button>
+  </div>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const CX=200, CY=200, ORBIT_R=118, TF_RX=38, TF_RY=28, DING_RX=48, DING_RY=44;
+const LOOP_CIRC = 2 * Math.PI * 180;
+
+const NOTES = [
+  {name:'D4',freq:293.66},{name:'F4',freq:349.23},
+  {name:'A4',freq:440.00},{name:'C5',freq:523.25},{name:'E5',freq:659.25},
+];
+const FIELD_ANGLES = [0, 90, 180, 270];
+
+const DELAY_DIVS = [
+  {label:'1/32',beats:.125},{label:'1/16',beats:.25},{label:'1/8·',beats:.375},
+  {label:'1/8',beats:.5},{label:'1/4·',beats:.75},{label:'1/4',beats:1},
+  {label:'1/2',beats:2},{label:'1/1',beats:4},
+];
+const RATIOS = [
+  {label:'1:1',beats:1},{label:'2:3',beats:2/3},{label:'3:4',beats:3/4},
+  {label:'3:5',beats:3/5},{label:'4:5',beats:4/5},{label:'5:6',beats:5/6},
+  {label:'5:7',beats:5/7},{label:'2:1',beats:2},
+];
+
+// ═══════════════════════════════════════════════════════
+// AUDIO ENGINE
+// ═══════════════════════════════════════════════════════
+let actx=null, preFX, filterNode;
+let reverbConv, reverbSend;
+let delayNode, delayFbGain, delayDryG, delayWetG, postDelay;
+let chorusDelayNode, chorusLFO, chorusLFOGain, chorusDryG, chorusWetG, postChorus;
+
+function ensureCtx() {
+  if (actx) { if (actx.state==='suspended') actx.resume(); return; }
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  buildChain(); initFxParams();
+}
+
+function buildChain() {
+  filterNode = actx.createBiquadFilter();
+  filterNode.type='lowpass'; filterNode.frequency.value=20000; filterNode.Q.value=0.7;
+  filterNode.connect(actx.destination);
+
+  const irLen=actx.sampleRate*2.8, irBuf=actx.createBuffer(2,irLen,actx.sampleRate);
+  for(let c=0;c<2;c++){const d=irBuf.getChannelData(c);for(let i=0;i<irLen;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/irLen,2.2);}
+  reverbConv=actx.createConvolver(); reverbConv.buffer=irBuf;
+  reverbSend=actx.createGain(); reverbSend.gain.value=0;
+  reverbSend.connect(reverbConv); reverbConv.connect(actx.destination);
+
+  postDelay=actx.createGain(); postDelay.gain.value=1;
+  delayDryG=actx.createGain(); delayDryG.gain.value=1;
+  delayWetG=actx.createGain(); delayWetG.gain.value=0;
+  delayNode=actx.createDelay(4.0); delayNode.delayTime.value=0.25;
+  delayFbGain=actx.createGain(); delayFbGain.gain.value=0;
+  delayDryG.connect(postDelay); delayWetG.connect(postDelay);
+  delayNode.connect(delayWetG); delayNode.connect(delayFbGain); delayFbGain.connect(delayNode);
+  postDelay.connect(filterNode); postDelay.connect(reverbSend);
+
+  postChorus=actx.createGain(); postChorus.gain.value=1;
+  chorusDryG=actx.createGain(); chorusDryG.gain.value=1;
+  chorusWetG=actx.createGain(); chorusWetG.gain.value=0;
+  chorusDelayNode=actx.createDelay(0.05); chorusDelayNode.delayTime.value=0.022;
+  chorusLFO=actx.createOscillator(); chorusLFO.type='sine'; chorusLFO.frequency.value=0.3;
+  chorusLFOGain=actx.createGain(); chorusLFOGain.gain.value=0;
+  chorusDryG.connect(postChorus); chorusDelayNode.connect(chorusWetG); chorusWetG.connect(postChorus);
+  chorusLFO.connect(chorusLFOGain); chorusLFOGain.connect(chorusDelayNode.delayTime);
+  chorusLFO.start();
+  postChorus.connect(delayDryG); postChorus.connect(delayNode);
+
+  preFX=actx.createGain(); preFX.gain.value=0.9;
+  preFX.connect(chorusDryG); preFX.connect(chorusDelayNode);
+}
+
+function playNote(freq, vel=1) {
+  if (!actx) return;
+  const now=actx.currentTime, gain=0.35+vel*0.5, dur=3.5-vel*0.8;
+  const ng=actx.createGain();
+  ng.gain.setValueAtTime(0,now); ng.gain.linearRampToValueAtTime(gain,now+0.004);
+  ng.gain.setTargetAtTime(0,now+0.06,dur*0.38); ng.connect(preFX);
+  [[1,1],[2,.45],[3,.15]].forEach(([r,a])=>{
+    const o=actx.createOscillator(),og=actx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(freq*r*1.008,now); o.frequency.exponentialRampToValueAtTime(freq*r,now+0.025);
+    og.gain.setValueAtTime(a,now); og.gain.setTargetAtTime(0,now+0.04,(dur*0.4)/r);
+    o.connect(og);og.connect(ng);o.start(now);o.stop(now+dur+0.5);
+  });
+  const nBuf=actx.createBuffer(1,actx.sampleRate*0.04,actx.sampleRate);
+  const nd=nBuf.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  const nSrc=actx.createBufferSource();nSrc.buffer=nBuf;
+  const bpf=actx.createBiquadFilter();bpf.type='bandpass';bpf.frequency.value=freq*3;bpf.Q.value=0.8;
+  const tg=actx.createGain();
+  tg.gain.setValueAtTime(vel*0.12,now);tg.gain.exponentialRampToValueAtTime(0.0001,now+0.04);
+  nSrc.connect(bpf);bpf.connect(tg);tg.connect(ng);nSrc.start(now);nSrc.stop(now+0.04);
+}
+
+// ═══════════════════════════════════════════════════════
+// FX
+// ═══════════════════════════════════════════════════════
+const fxOn={reverb:false,delay:false,chorus:false,filter:false};
+let bpm=120;
+
+function updateReverb(){
+  if(!actx)return;
+  reverbSend.gain.setTargetAtTime(fxOn.reverb?(+$('rv-mix').value/100)*0.8:0,actx.currentTime,0.05);
+  $('rv-size-val').textContent=`${$('rv-size').value}%`;
+  $('rv-mix-val').textContent=`${$('rv-mix').value}%`;
+}
+function updateDelay(){
+  if(!actx)return;
+  const idx=Math.round(+$('dl-time').value/100*(DELAY_DIVS.length-1));
+  const div=DELAY_DIVS[Math.max(0,Math.min(DELAY_DIVS.length-1,idx))];
+  const sec=Math.min(3.9,div.beats*(60/bpm));
+  const fb=+$('dl-fb').value/100, mix=+$('dl-mix').value/100;
+  delayNode.delayTime.setTargetAtTime(sec,actx.currentTime,0.02);
+  delayFbGain.gain.setTargetAtTime(fxOn.delay?fb:0,actx.currentTime,0.02);
+  delayWetG.gain.setTargetAtTime(fxOn.delay?mix*0.7:0,actx.currentTime,0.02);
+  $('dl-time-val').textContent=div.label;
+  $('dl-fb-val').textContent=`${$('dl-fb').value}%`;
+  $('dl-mix-val').textContent=`${$('dl-mix').value}%`;
+}
+function updateChorus(){
+  if(!actx)return;
+  const rate=0.1+(+$('ch-rate').value/100)*3.9;
+  const depth=+$('ch-depth').value/100*0.012;
+  const mix=+$('ch-mix').value/100;
+  chorusLFO.frequency.setTargetAtTime(rate,actx.currentTime,0.05);
+  chorusLFOGain.gain.setTargetAtTime(fxOn.chorus?depth:0,actx.currentTime,0.05);
+  chorusWetG.gain.setTargetAtTime(fxOn.chorus?mix*0.6:0,actx.currentTime,0.05);
+  $('ch-rate-val').textContent=`${rate.toFixed(1)}Hz`;
+  $('ch-depth-val').textContent=`${$('ch-depth').value}%`;
+  $('ch-mix-val').textContent=`${$('ch-mix').value}%`;
+}
+function updateFilter(){
+  if(!actx)return;
+  const t=+$('fl-cutoff').value/100;
+  const hz=Math.round(200*Math.pow(100,t));
+  const Q=0.7+(+$('fl-reso').value/100)*15;
+  filterNode.frequency.setTargetAtTime(fxOn.filter?hz:20000,actx.currentTime,0.05);
+  filterNode.Q.setTargetAtTime(fxOn.filter?Q:0.7,actx.currentTime,0.05);
+  const lbl=hz>=1000?`${(hz/1000).toFixed(hz>=10000?0:1)}kHz`:`${hz}Hz`;
+  $('fl-cutoff-val').textContent=lbl;
+  $('fl-reso-val').textContent=`${$('fl-reso').value}%`;
+}
+
+function setupFxBlock(key,blockId,updateFn){
+  const tog=$(`tog-${key}`), block=$(blockId);
+  tog.addEventListener('change',()=>{
+    fxOn[key]=tog.checked;
+    block.classList.toggle('off',!tog.checked);
+    if(actx)updateFn();
+  });
+  block.querySelectorAll('.fx-slider').forEach(s=>s.addEventListener('input',()=>{if(actx)updateFn();}));
+  // Expand/collapse on header click
+  block.querySelector('.fx-header').addEventListener('click',()=>{
+    block.classList.toggle('expanded');
+  });
+}
+
+function initFxParams(){
+  setupFxBlock('reverb','fxb-reverb',updateReverb);
+  setupFxBlock('delay','fxb-delay',updateDelay);
+  setupFxBlock('chorus','fxb-chorus',updateChorus);
+  setupFxBlock('filter','fxb-filter',updateFilter);
+  updateReverb();updateDelay();updateChorus();updateFilter();
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD DISC
+// ═══════════════════════════════════════════════════════
+const tfGroup=$('tone-fields'),lblGroup=$('note-labels');
+const dingEl=$('ding'),dingLbl=$('ding-lbl'),discSvg=$('disc-svg');
+const tfMeta=[];
+
+FIELD_ANGLES.forEach((deg,i)=>{
+  const rad=(deg-90)*Math.PI/180, cx=CX+ORBIT_R*Math.cos(rad), cy=CY+ORBIT_R*Math.sin(rad);
+  const ns='http://www.w3.org/2000/svg';
+  const groove=document.createElementNS(ns,'ellipse');
+  groove.setAttribute('cx',cx.toFixed(1));groove.setAttribute('cy',cy.toFixed(1));
+  groove.setAttribute('rx',(TF_RX+3).toString());groove.setAttribute('ry',(TF_RY+3).toString());
+  groove.setAttribute('fill','rgba(0,0,0,0.4)');groove.setAttribute('transform',`rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})`);
+  groove.setAttribute('pointer-events','none');tfGroup.appendChild(groove);
+  const el=document.createElementNS(ns,'ellipse');
+  el.setAttribute('cx',cx.toFixed(1));el.setAttribute('cy',cy.toFixed(1));
+  el.setAttribute('rx',TF_RX.toString());el.setAttribute('ry',TF_RY.toString());
+  el.setAttribute('fill','url(#tf-d)');el.setAttribute('stroke','rgba(0,0,0,0.4)');el.setAttribute('stroke-width','1.5');
+  el.setAttribute('transform',`rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})`);el.setAttribute('style','cursor:pointer');
+  tfGroup.appendChild(el);
+  const hi=document.createElementNS(ns,'ellipse');
+  hi.setAttribute('cx',cx.toFixed(1));hi.setAttribute('cy',cy.toFixed(1));
+  hi.setAttribute('rx',TF_RX.toString());hi.setAttribute('ry',TF_RY.toString());
+  hi.setAttribute('fill','none');hi.setAttribute('stroke','rgba(255,255,255,0.07)');hi.setAttribute('stroke-width','1');
+  hi.setAttribute('transform',`rotate(${deg} ${cx.toFixed(1)} ${cy.toFixed(1)})`);hi.setAttribute('pointer-events','none');
+  tfGroup.appendChild(hi);
+  const lbl=document.createElementNS(ns,'text');
+  lbl.setAttribute('x',cx.toFixed(1));lbl.setAttribute('y',cy.toFixed(1));
+  lbl.setAttribute('font-family','DM Mono,monospace');lbl.setAttribute('font-size','11');lbl.setAttribute('font-weight','300');lbl.setAttribute('letter-spacing','1');
+  lbl.setAttribute('fill','rgba(255,255,255,0.3)');lbl.setAttribute('text-anchor','middle');lbl.setAttribute('dominant-baseline','middle');
+  lbl.setAttribute('pointer-events','none');lbl.setAttribute('opacity','0');lbl.textContent=NOTES[i+1].name;
+  lblGroup.appendChild(lbl);
+  tfMeta.push({cx,cy,angleRad:deg*Math.PI/180,el,labelEl:lbl,noteIdx:i+1});
+});
+
+let labelsShown=false;
+function showLabels(){
+  if(labelsShown)return;labelsShown=true;
+  tfMeta.forEach(m=>m.labelEl.setAttribute('opacity','1'));
+  dingLbl.setAttribute('opacity','1');
+}
+
+function svgPoint(cx,cy){
+  const r=discSvg.getBoundingClientRect();
+  return{x:(cx-r.left)/r.width*400,y:(cy-r.top)/r.height*400};
+}
+function hitZone(px,py){
+  if(((px-CX)/DING_RX)**2+((py-CY)/DING_RY)**2<=1.1)return{noteIdx:0,cx:CX,cy:CY,el:dingEl};
+  for(const m of tfMeta){
+    const dx=px-m.cx,dy=py-m.cy,ca=Math.cos(-m.angleRad),sa=Math.sin(-m.angleRad);
+    if(((dx*ca-dy*sa)/TF_RX)**2+((dx*sa+dy*ca)/TF_RY)**2<=1.25)return{noteIdx:m.noteIdx,cx:m.cx,cy:m.cy,el:m.el};
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// RIPPLE
+// ═══════════════════════════════════════════════════════
+const rippleSvg=$('ripple-svg');
+function spawnRipple(cx,cy,vel){
+  const ns='http://www.w3.org/2000/svg',c=document.createElementNS(ns,'circle');
+  c.setAttribute('cx',cx.toFixed(1));c.setAttribute('cy',cy.toFixed(1));c.setAttribute('r','2');
+  c.setAttribute('fill','none');c.setAttribute('stroke',`rgba(255,255,255,${(0.25+vel*0.2).toFixed(2)})`);c.setAttribute('stroke-width','1');
+  rippleSvg.appendChild(c);
+  const maxR=44+vel*12,dur=600,start=performance.now();
+  function frame(ts){
+    const t=Math.min((ts-start)/dur,1);
+    c.setAttribute('r',(2+t*maxR).toFixed(1));
+    c.setAttribute('stroke',`rgba(255,255,255,${Math.max(0,(1-t)*(0.25+vel*0.2)).toFixed(3)})`);
+    if(t<1)requestAnimationFrame(frame);else rippleSvg.removeChild(c);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ═══════════════════════════════════════════════════════
+// TRIGGER
+// ═══════════════════════════════════════════════════════
+const DEBOUNCE=80,lastHit={},flashTO={};
+function trigger(zone,vel=0.85,doRecord=true){
+  const now=performance.now();
+  if(now-(lastHit[zone.noteIdx]||0)<DEBOUNCE)return;
+  lastHit[zone.noteIdx]=now;
+  playNote(NOTES[zone.noteIdx].freq,vel);
+  showLabels();
+  const isCenter=zone.noteIdx===0;
+  zone.el.setAttribute('fill',isCenter?'url(#ding-a)':'url(#tf-a)');
+  clearTimeout(flashTO[zone.noteIdx]);
+  flashTO[zone.noteIdx]=setTimeout(()=>zone.el.setAttribute('fill',isCenter?'url(#ding-d)':'url(#tf-d)'),200);
+  spawnRipple(zone.cx,zone.cy,vel);
+  updateBPM(now);
+  if(doRecord&&recording)recordedHits.push({t:now-recordStart,noteIdx:zone.noteIdx,cx:zone.cx,cy:zone.cy,vel});
+}
+
+// Pointer events
+const discWrap=$('disc-wrap'), activePointers=new Set();
+discWrap.addEventListener('pointerdown',e=>{
+  if(activePointers.has(e.pointerId))return;
+  activePointers.add(e.pointerId); ensureCtx();
+  const p=svgPoint(e.clientX,e.clientY), zone=hitZone(p.x,p.y);
+  const vel=e.pressure>0?Math.min(1,e.pressure*2):0.65+Math.random()*0.3;
+  if(zone)trigger(zone,vel);
+  e.preventDefault();
+},{passive:false});
+discWrap.addEventListener('pointerup',e=>activePointers.delete(e.pointerId));
+discWrap.addEventListener('pointercancel',e=>activePointers.delete(e.pointerId));
+
+// ═══════════════════════════════════════════════════════
+// BPM
+// ═══════════════════════════════════════════════════════
+const hitTimes=[], bpmDisplay=$('bpm-display');
+let bpmTapTimes=[], bpmFlashTO=null, nudgeInterval=null;
+
+function setBPM(val){
+  bpm=Math.max(40,Math.min(240,Math.round(val)));
+  bpmDisplay.textContent=bpm;
+  bpmDisplay.classList.add('active');
+  if(fxOn.delay&&actx)updateDelay();
+  if(polyPlaying){polyBpmLocal=bpm;$('poly-bpm').textContent=`${bpm} bpm`;}
+}
+
+function flashBPM(){
+  bpmDisplay.classList.add('tapped');
+  clearTimeout(bpmFlashTO);
+  bpmFlashTO=setTimeout(()=>bpmDisplay.classList.remove('tapped'),120);
+}
+
+bpmDisplay.addEventListener('pointerdown',e=>{
+  e.stopPropagation(); flashBPM();
+  const now=performance.now();
+  bpmTapTimes.push(now);
+  if(bpmTapTimes.length>8)bpmTapTimes.shift();
+  if(bpmTapTimes.length>=2){
+    const gaps=[];
+    for(let i=1;i<bpmTapTimes.length;i++){const g=bpmTapTimes[i]-bpmTapTimes[i-1];if(g>200&&g<3000)gaps.push(g);}
+    if(gaps.length>=1)setBPM(60000/(gaps.reduce((a,b)=>a+b,0)/gaps.length));
+  }
+  setTimeout(()=>{if(bpmTapTimes.length&&performance.now()-bpmTapTimes[bpmTapTimes.length-1]>3000)bpmTapTimes=[];},3100);
+});
+
+function startNudge(dir){setBPM(bpm+dir);nudgeInterval=setInterval(()=>setBPM(bpm+dir),120);}
+function stopNudge(){clearInterval(nudgeInterval);nudgeInterval=null;}
+
+$('bpm-dec').addEventListener('click',()=>setBPM(bpm-1));
+$('bpm-inc').addEventListener('click',()=>setBPM(bpm+1));
+$('bpm-dec').addEventListener('pointerdown',()=>startNudge(-1));
+$('bpm-inc').addEventListener('pointerdown',()=>startNudge(1));
+['pointerup','pointerleave','pointercancel'].forEach(ev=>{
+  $('bpm-dec').addEventListener(ev,stopNudge);
+  $('bpm-inc').addEventListener(ev,stopNudge);
+});
+
+function updateBPM(now){
+  hitTimes.push(now);if(hitTimes.length>8)hitTimes.shift();
+  if(hitTimes.length>=3){
+    const gaps=[];
+    for(let i=1;i<hitTimes.length;i++){const g=hitTimes[i]-hitTimes[i-1];if(g>150&&g<2000)gaps.push(g);}
+    if(gaps.length>=2)setBPM(60000/(gaps.reduce((a,b)=>a+b,0)/gaps.length));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// METRONOME
+// ═══════════════════════════════════════════════════════
+const metroRing=$('metro-ring'),metroBtn=$('metro-btn');
+let metroOn=false,metroRAF=null,metroStart=null;
+function metroFrame(ts){
+  if(!metroOn)return;
+  if(!metroStart)metroStart=ts;
+  const phase=((ts-metroStart)%(60000/bpm))/(60000/bpm);
+  metroRing.setAttribute('stroke',`rgba(255,255,255,${(Math.max(0,1-phase*5)*0.14).toFixed(3)})`);
+  metroRAF=requestAnimationFrame(metroFrame);
+}
+metroBtn.addEventListener('click',()=>{
+  metroOn=!metroOn;metroBtn.classList.toggle('on',metroOn);
+  if(metroOn){metroStart=null;metroRAF=requestAnimationFrame(metroFrame);}
+  else{cancelAnimationFrame(metroRAF);metroRing.setAttribute('stroke','rgba(255,255,255,0)');}
+});
+
+// ═══════════════════════════════════════════════════════
+// RECORD & PLAYBACK
+// ═══════════════════════════════════════════════════════
+const loopProg=$('loop-progress'),loopSvg=$('loop-svg');
+const btnRecord=$('btn-record'),btnPlay=$('btn-play'),btnClear=$('btn-clear');
+let recording=false,playing=false,recordStart=0,loopDuration=0;
+let recordedHits=[],recRAF=null,playRAF=null,playStart=null,playNextIdx=0;
+
+function startRecording(){
+  recordedHits=[];recordStart=performance.now();recording=true;
+  btnRecord.textContent='■ stop';btnRecord.classList.add('recording');
+  btnPlay.classList.add('disabled');btnClear.classList.add('disabled');
+  loopProg.setAttribute('opacity','1');loopProg.setAttribute('stroke-dashoffset',LOOP_CIRC.toString());
+  recRAF=requestAnimationFrame(recFrame);
+}
+function recFrame(){
+  if(!recording)return;
+  const p=Math.min((performance.now()-recordStart)/(2*4*60000/bpm),1);
+  loopProg.setAttribute('stroke-dashoffset',(LOOP_CIRC*(1-p)).toFixed(1));
+  if(p>=1){stopRecording();return;}
+  recRAF=requestAnimationFrame(recFrame);
+}
+function stopRecording(){
+  if(!recording)return;
+  cancelAnimationFrame(recRAF);recording=false;
+  loopDuration=performance.now()-recordStart;
+  const barDur=4*60000/bpm;
+  loopDuration=Math.max(1,Math.round(loopDuration/barDur))*barDur;
+  btnRecord.textContent='● rec';btnRecord.classList.remove('recording');
+  loopProg.setAttribute('stroke-dashoffset','0');
+  loopProg.setAttribute('opacity',recordedHits.length?'0.3':'0');
+  if(recordedHits.length){btnPlay.classList.remove('disabled');btnClear.classList.remove('disabled');drawLoopMarkers();}
+}
+function drawLoopMarkers(){
+  while(loopSvg.firstChild)loopSvg.removeChild(loopSvg.firstChild);
+  recordedHits.forEach(h=>{
+    const angle=(h.t/loopDuration)*2*Math.PI-Math.PI/2;
+    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx',(CX+180*Math.cos(angle)).toFixed(1));dot.setAttribute('cy',(CY+180*Math.sin(angle)).toFixed(1));
+    dot.setAttribute('r',(1.5+h.vel*2.5).toFixed(1));dot.setAttribute('fill',`rgba(255,255,255,${(0.18+h.vel*0.3).toFixed(2)})`);
+    loopSvg.appendChild(dot);
+  });
+}
+function startPlayback(){
+  if(!recordedHits.length||!loopDuration)return;
+  playing=true;playStart=performance.now();playNextIdx=0;
+  btnPlay.textContent='■ stop';btnPlay.classList.add('playing');
+  loopProg.setAttribute('opacity','0.45');playRAF=requestAnimationFrame(playFrame);
+}
+function playFrame(ts){
+  if(!playing)return;
+  const elapsed=(ts-playStart)%loopDuration;
+  loopProg.setAttribute('stroke-dashoffset',(LOOP_CIRC*(1-elapsed/loopDuration)).toFixed(1));
+  if(playNextIdx>0&&elapsed<(recordedHits[playNextIdx-1]?.t||0))playNextIdx=0;
+  while(playNextIdx<recordedHits.length&&elapsed>=recordedHits[playNextIdx].t){
+    const h=recordedHits[playNextIdx];
+    trigger({noteIdx:h.noteIdx,cx:h.cx,cy:h.cy,el:h.noteIdx===0?dingEl:tfMeta[h.noteIdx-1].el},h.vel,false);
+    playNextIdx++;
+  }
+  playRAF=requestAnimationFrame(playFrame);
+}
+function stopPlayback(){
+  playing=false;cancelAnimationFrame(playRAF);
+  btnPlay.textContent='▶ play';btnPlay.classList.remove('playing');
+  loopProg.setAttribute('stroke-dashoffset','0');loopProg.setAttribute('opacity','0.3');
+}
+function clearLoop(){
+  stopPlayback();recordedHits=[];loopDuration=0;
+  while(loopSvg.firstChild)loopSvg.removeChild(loopSvg.firstChild);
+  loopProg.setAttribute('opacity','0');
+  btnPlay.classList.add('disabled');btnClear.classList.add('disabled');
+  btnPlay.textContent='▶ play';
+}
+btnRecord.addEventListener('click',()=>{ensureCtx();if(recording){stopRecording();return;}if(playing)stopPlayback();startRecording();});
+btnPlay.addEventListener('click',()=>{ensureCtx();if(playing){stopPlayback();return;}startPlayback();});
+btnClear.addEventListener('click',clearLoop);
+
+// ═══════════════════════════════════════════════════════
+// POLYRHYTHM
+// ═══════════════════════════════════════════════════════
+const lanes=[
+  {id:'a',ratioIdx:2,noteSeq:[0,2,4],  vol:0.75,muted:false,stepIdx:0,phase:0,volGain:null},
+  {id:'b',ratioIdx:1,noteSeq:[1,3,0,2],vol:0.55,muted:false,stepIdx:0,phase:0,volGain:null},
+  {id:'c',ratioIdx:6,noteSeq:[4,0,3],  vol:0.45,muted:false,stepIdx:0,phase:0,volGain:null},
+];
+let polyPlaying=false,polyClockRef=null,polyVisRAF=null,polyBpmLocal=120;
+
+function buildLaneUI(lane){
+  const rc=$(`ratios-${lane.id}`);rc.innerHTML='';
+  RATIOS.forEach((r,i)=>{
+    const b=document.createElement('button');
+    b.className='ratio-btn'+(i===lane.ratioIdx?' sel':'');b.textContent=r.label;
+    b.addEventListener('click',()=>{lane.ratioIdx=i;rc.querySelectorAll('.ratio-btn').forEach((x,j)=>x.classList.toggle('sel',j===i));});
+    rc.appendChild(b);
+  });
+  const nc=$(`notes-${lane.id}`);nc.innerHTML='';
+  NOTES.forEach((n,i)=>{
+    const p=document.createElement('button');
+    p.className='note-pill'+(lane.noteSeq.includes(i)?' sel':'');p.textContent=n.name;
+    p.addEventListener('click',()=>{
+      if(lane.noteSeq.includes(i)){if(lane.noteSeq.length>1)lane.noteSeq=lane.noteSeq.filter(x=>x!==i);}
+      else lane.noteSeq=[...lane.noteSeq,i].sort((a,b)=>a-b);
+      buildLaneUI(lane);
+    });
+    nc.appendChild(p);
+  });
+  const mb=$(`mute-${lane.id}`);
+  mb.classList.toggle('muted',lane.muted);
+  mb.onclick=()=>{lane.muted=!lane.muted;mb.classList.toggle('muted',lane.muted);if(lane.volGain)lane.volGain.gain.setTargetAtTime(lane.muted?0:lane.vol,actx?.currentTime||0,0.02);};
+  const vs=$(`vol-${lane.id}`);vs.value=Math.round(lane.vol*100);
+  vs.oninput=()=>{lane.vol=+vs.value/100;if(lane.volGain&&!lane.muted)lane.volGain.gain.setTargetAtTime(lane.vol,actx.currentTime,0.02);};
+}
+lanes.forEach(buildLaneUI);
+
+function ensureLaneGains(){
+  lanes.forEach(l=>{if(!l.volGain&&actx){l.volGain=actx.createGain();l.volGain.gain.value=l.muted?0:l.vol;l.volGain.connect(preFX);}});
+}
+
+function polyPlayNote(noteIdx,lane){
+  if(!actx||lane.muted)return;
+  const freq=NOTES[noteIdx].freq,now=actx.currentTime,vel=0.6+Math.random()*0.25,dur=2.8;
+  const ng=actx.createGain();
+  ng.gain.setValueAtTime(0,now);ng.gain.linearRampToValueAtTime(vel,now+0.004);
+  ng.gain.setTargetAtTime(0,now+0.05,dur*0.36);ng.connect(lane.volGain);
+  [[1,1],[2,.4],[3,.12]].forEach(([r,a])=>{
+    const o=actx.createOscillator(),og=actx.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(freq*r*1.007,now);o.frequency.exponentialRampToValueAtTime(freq*r,now+0.02);
+    og.gain.setValueAtTime(a,now);og.gain.setTargetAtTime(0,now+0.03,(dur*0.38)/r);
+    o.connect(og);og.connect(ng);o.start(now);o.stop(now+dur+0.3);
+  });
+  const meta=noteIdx===0?{el:dingEl,cx:CX,cy:CY}:{el:tfMeta[noteIdx-1].el,cx:tfMeta[noteIdx-1].cx,cy:tfMeta[noteIdx-1].cy};
+  meta.el.setAttribute('fill',noteIdx===0?'url(#ding-a)':'url(#tf-a)');
+  clearTimeout(flashTO[noteIdx]);
+  flashTO[noteIdx]=setTimeout(()=>meta.el.setAttribute('fill',noteIdx===0?'url(#ding-d)':'url(#tf-d)'),180);
+  spawnRipple(meta.cx,meta.cy,vel*0.7);
+}
+
+const TICK_INTERVAL=10;
+function polyTick(){
+  if(!polyPlaying)return;
+  const beatMs=60000/polyBpmLocal;
+  lanes.forEach(lane=>{
+    lane.phase=(lane.phase||0)+(TICK_INTERVAL/beatMs)*RATIOS[lane.ratioIdx].beats;
+    if(lane.phase>=1){lane.phase-=Math.floor(lane.phase);polyPlayNote(lane.noteSeq[lane.stepIdx%lane.noteSeq.length],lane);lane.stepIdx++;}
+  });
+}
+
+const phHeads=[null,null,null];
+function buildPlayheads(){
+  const ns='http://www.w3.org/2000/svg';
+  phHeads.forEach((_,i)=>{
+    if(phHeads[i])rippleSvg.removeChild(phHeads[i]);
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('r',i===0?'4':i===1?'3':'2.5');
+    c.setAttribute('fill',i===0?'rgba(255,255,255,0.75)':i===1?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.22)');
+    rippleSvg.appendChild(c);phHeads[i]=c;
+  });
+}
+function removePlayheads(){phHeads.forEach((c,i)=>{if(c&&c.parentNode)c.parentNode.removeChild(c);phHeads[i]=null;});}
+function polyVisFrame(){
+  if(!polyPlaying)return;
+  const radii=[152,161,170];
+  lanes.forEach((l,i)=>{
+    const ph=phHeads[i];if(!ph)return;
+    const a=l.phase*2*Math.PI-Math.PI/2;
+    ph.setAttribute('cx',(CX+radii[i]*Math.cos(a)).toFixed(2));
+    ph.setAttribute('cy',(CY+radii[i]*Math.sin(a)).toFixed(2));
+  });
+  polyVisRAF=requestAnimationFrame(polyVisFrame);
+}
+
+function startPoly(){
+  ensureCtx();ensureLaneGains();
+  polyBpmLocal=bpm;$('poly-bpm').textContent=`${bpm} bpm`;
+  lanes.forEach(l=>{l.phase=0;l.stepIdx=0;});
+  polyPlaying=true;polyClockRef=setInterval(polyTick,TICK_INTERVAL);
+  buildPlayheads();polyVisRAF=requestAnimationFrame(polyVisFrame);
+  $('poly-play-btn').textContent='■ Stop Polyrhythm';$('poly-play-btn').classList.add('playing');
+}
+function stopPoly(){
+  polyPlaying=false;clearInterval(polyClockRef);cancelAnimationFrame(polyVisRAF);removePlayheads();
+  $('poly-play-btn').textContent='▶ Start Polyrhythm';$('poly-play-btn').classList.remove('playing');
+}
+$('poly-play-btn').addEventListener('click',()=>{ensureCtx();polyPlaying?stopPoly():startPoly();});
+</script>
+</body>
+</html>
